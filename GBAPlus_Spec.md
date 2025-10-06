@@ -1,11 +1,96 @@
-# GBA Plus Open Hardware Specification v0.1
+# GBA Plus Open Hardware Specification v1.0
 
 ## 1. Overview
-This document defines the electrical, logical, and timing interfaces of the GBA Plus dual-mode FPGA core.  
-– Legacy Mode: Cycle-accurate Game Boy Advance replication.  
-– Plus Mode: Extended 1600×1440 framebuffer, banked VRAM, 6 DMA channels, optional 33 MHz CPU clock.
+GBA Plus is a dual‑mode FPGA core specification for the Analogue Pocket.  
+It balances preservation (cycle‑accurate GBA emulation) with extension (new hardware features).
 
-## 2. Top-Level I/O and Ports
+- **Legacy Mode**: 240×160 framebuffer, 16.78 MHz ARM7TDMI, 96 KB VRAM, 4 DMA channels, 40 sprites/line.  
+- **Plus Mode**: 1600×1440 framebuffer, 33 MHz CPU option, 2 MB banked VRAM, 6 DMA channels, 64 sprites/line, extended blending.
+
+This document defines the interfaces, memory maps, state machines, and test methodology needed for implementation.
+
+## 2. Mode Detection
+- On reset, the ROM header at offset 0x0C0 is scanned.  
+- If bytes == "GBAPLUS\0", assert plus_mode = 1.  
+- Otherwise, default to Legacy Mode.
+
+Signal:  
+plus_mode (1 bit, global) → configures clock mux, video pipeline, memory map.
+
+## 3. Clocking
+- Legacy Mode: 16.78 MHz (matches original GBA).  
+- Plus Mode: 33 MHz (doubled throughput).  
+- Generated via PLL/MMCM from 50 MHz reference.  
+- BUFGMUX selects active clock.  
+- Timing constraints: false paths across domains, multi‑cycle paths for AHB crossings.
+
+## 4. Video Pipeline
+Two parallel pipelines, selected by plus_mode:
+
+- Legacy Scaler  
+  - Input: 240×160 framebuffer (5:5:5 RGB).  
+  - Upscale: nearest‑neighbor → 1440×960.  
+  - Output: centered in 1600×1440 with black borders.
+
+- Plus Passthrough  
+  - Input: 1600×1440 framebuffer (8:8:8 RGB).  
+  - Output: direct to LCD controller.
+
+Pixel clock: 33 MHz in both modes for consistency.
+
+## 4. Clock Generation & Switching
+- MMCM/PLL generates 16.78 MHz (CLKOUT0) and 33 MHz (CLKOUT1) from clk_50MHz.  
+- BUFGMUX selects lcdclk = plusmode ? CLKOUT1 : CLKOUT0.  
+
+Timing Constraints
+- False-paths between 16.78 MHz and 33 MHz domains.  
+- Multi-cycle paths for AHB crossing.
+
+## 5. Video Pipeline
+
+### 5.1 Legacy Scaler
+- Input: 240×160 @ 5:5:5 RGB  
+- Upscale to 1440×960 via nearest-neighbor.  
+- Center within 1600×1440, black border.
+
+### 5.2 Plus Passthrough
+- Input: 1600×1440 @ 8:8:8 RGB from extended VRAM.  
+- Output directly to LCD.
+
+Mux controlled by plus_mode.
+
+## 6. Memory Map & Banked VRAM
+| Region          | Addr Range (Legacy)          | Addr Range (Plus)                     |
+|-----------------|------------------------------|---------------------------------------|
+| VRAM            | 0x06000000–0x06017FFF (96KB) | 0x06000000–0x061FFFFF (2MB, banked)   |
+| Palette RAM     | 0x05000000–0x050003FF (1KB)  | same + extended LUT banks             |
+| OAM             | 0x07000000–0x070003FF (1KB)  | same + banked OAM segments            |
+| DMA Channels    | 4 ch @ 0x040000B0–0x040000BC | 6 ch (DMA4/5 @ 0xA0000400–0xA000040C) |
+
+Bank-select register: 0xA000_04F0 (3-bit value → map 256 KB banks).
+
+## 7. Sprite Engine FSM
+State diagram (Appendix B) with five states:
+1. IDLE  
+2. FETCH_ATTR  
+3. ISSUE_DMA  
+4. WAIT_DMA  
+5. DRAW_LINE  
+
+See Verilog pseudocode in Appendix B.
+
+## 8. Blending Logic
+- Input: bgpixel[14:0], sppixel[14:0], spprio, blendmode[1:0].  
+- Transparent pixels (0x0000) skipped.  
+- Modes:  
+  - 00: Opaque (sprite replaces BG).  
+  - 01: (BG+SP)>>1 - 50/50 average.
+  - 10: (BG>>2)+(SP−(SP>>2)) - 75% sprite + 25% BG.  
+- Combinatorial logic with optional pipeline register for 33 MHz timing.
+- Priority compare: spprio < bgprio.
+
+
+## 9. Top-Level I/O and Ports
 | Signal         | Dir   | Width     | Description                                |
 |--------------- |------ |---------- |------------------------------------------- |
 | `clk_50MHz`    | in    | 1         | 50 MHz reference clock                     |
@@ -38,65 +123,30 @@ module header_scan(...);
 endmodule
 ```
 
-4. Clock Generation & Switching
-- MMCM/PLL generates 16.78 MHz (CLKOUT0) and 33 MHz (CLKOUT1) from clk_50MHz.  
-- BUFGMUX selects lcdclk = plusmode ? CLKOUT1 : CLKOUT0.  
+## 10. Toolchain & SDK
+- Header patcher: inserts "GBAPLUS\0" magic string.  
+- libgba_plus: exposes APIs for VRAM banks, DMA4/5, Plus PPU registers.  
+- Examples:  
+  - Legacy demo (letterboxed).  
+  - Plus demo (full‑screen tilemap, sprite stress test).
 
-Timing Constraints
-- False-paths between 16.78 MHz and 33 MHz domains.  
-- Multi-cycle paths for AHB crossing.
+## 11. Verification Plan
+- Compatibility: run commercial GBA test ROMs in Legacy Mode.  
+- Performance: measure DMA throughput, sprite rendering at 33 MHz.  
+- Case Studies:  
+  - Full‑screen 1600×1440 demo.  
+  - 64‑sprite blending stress test.
 
-5. Video Pipeline
-
-5.1 Legacy Scaler
-- Input: 240×160 @ 5:5:5 RGB  
-- Upscale to 1440×960 via nearest-neighbor.  
-- Center within 1600×1440, black border.
-
-5.2 Plus Passthrough
-- Input: 1600×1440 @ 8:8:8 RGB from extended VRAM.  
-- Output directly to LCD.
-
-Mux controlled by plus_mode.
-
-6. Memory Map & Banked VRAM
-| Region          | Addr Range (Legacy)       | Addr Range (Plus)                  |
-|-----------------|---------------------------|------------------------------------|
-| VRAM            | 0x06000000–0x06017FFF     | 0x06000000–0x061FFFFF              |
-| Palette RAM     | 0x05000000–0x050003FF     | same + extended LUT banks          |
-| OAM             | 0x07000000–0x070003FF     | same + banked OAM segments         |
-| DMA Channels    | 4 @ 0x040000B0–0x040000BC | 6 (DMA4/5 @ 0xA0000400–0xA000040C) |
-
-Bank-select register: 0xA000_04F0 (3-bit value → map 256 KB banks).
-
-7. Sprite Engine FSM
-State diagram (Appendix B) with five states:
-1. IDLE  
-2. FETCH_ATTR  
-3. ISSUE_DMA  
-4. WAIT_DMA  
-5. DRAW_LINE  
-
-See Verilog pseudocode in Appendix B.
-
-8. Blending Logic
-- Input pixels: bgpixel[14:0], sppixel[14:0] (0 = transparent).  
-- Blend modes (2-bit):  
-  - 00 = opaque  
-  - 01 = (BG+SP)>>1  
-  - 10 = (BG>>2)+(SP−(SP>>2))  
-- Priority compare: spprio < bgprio.
-
-Verilog in Appendix C.
-
-9. Verification & Testbench Interface
-- Test vectors for header detection, clock switching, memory map.  
-- OAM dumps and expected pixel outputs.  
-- Scripts: make testbench, make verify.
-
-10. Appendix
-- A. Header-scan FSM state chart  
-- B. Sprite FSM pseudocode  
-- C. Blending logic equations and timing  
+## 12. Implementation Roadmap
+- [ ] Mode detection FSM.  
+- [ ] Clock mux + PLL.  
+- [ ] Legacy scaler pipeline.  
+- [ ] Plus passthrough pipeline.  
+- [ ] VRAM controller + bank select.  
+- [ ] DMA4/5 integration.  
+- [ ] Sprite FSM.  
+- [ ] Blending logic.  
+- [ ] Testbenches + verification scripts.  
+- [ ] Example demos.
 
 End of Spec v0.1
