@@ -111,7 +111,7 @@ See Verilog pseudocode in Appendix B.
 | `hrdata`       | out   | 32        | AHB read data                              |
 | `hready`       | out   | 1         | AHB ready                                  |
 
-## 3. Boot-Time Mode Detection
+## 10. Boot-Time Mode Detection
 1. On reset, sample `rom_header` bytes at offset 0x0C0.  
 2. If bytes == `"G" "B" "A" "P" "L" "U" "S" 0x00"`, assert `plus_mode`.  
 3. Otherwise `plus_mode = 0` (legacy).
@@ -123,21 +123,21 @@ module header_scan(...);
 endmodule
 ```
 
-## 10. Toolchain & SDK
+## 11. Toolchain & SDK
 - Header patcher: inserts "GBAPLUS\0" magic string.  
 - libgba_plus: exposes APIs for VRAM banks, DMA4/5, Plus PPU registers.  
 - Examples:  
   - Legacy demo (letterboxed).  
   - Plus demo (full‑screen tilemap, sprite stress test).
 
-## 11. Verification Plan
+## 12. Verification Plan
 - Compatibility: run commercial GBA test ROMs in Legacy Mode.  
 - Performance: measure DMA throughput, sprite rendering at 33 MHz.  
 - Case Studies:  
   - Full‑screen 1600×1440 demo.  
   - 64‑sprite blending stress test.
 
-## 12. Implementation Roadmap
+## 13. Implementation Roadmap
 - [ ] Mode detection FSM.  
 - [ ] Clock mux + PLL.  
 - [ ] Legacy scaler pipeline.  
@@ -149,4 +149,4 @@ endmodule
 - [ ] Testbenches + verification scripts.  
 - [ ] Example demos.
 
-End of Spec v0.1
+End of Spec v1
