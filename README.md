@@ -5,6 +5,7 @@
 - **Legacy Mode**: Cycle-accurate GameBoy Advance (240x160, 16.78MHz, 4 DMA, 40 sprites).
 - **Plus Mode**: Extended execution environment (1600x1440 framebuffer, 33MHz CPU, 6 DMA, 64 sprites, 2MB VRAM).
 
+```
       +-------------------+
       |  ROM Header Scan  |
       +---------+---------+
@@ -15,7 +16,7 @@
       |   (Legacy/Plus)   |
       +----+---------+----+
            |         |
-     Legacy Mode  Plus Mode
+      Legacy Mode  Plus Mode
            |         |
            v         v
  +---------+----+  +-+------------+
@@ -34,6 +35,7 @@
             +-----------+
             |  LCD Out  |
             +-----------+
+```
 
 This repo contains the specification only - no implementation yet. The goal iss to proovide a clear, open foundation so FPGA developers and retro-computing enthusiasts can build on it.
 
