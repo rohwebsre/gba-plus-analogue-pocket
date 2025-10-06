@@ -6,25 +6,25 @@ This document defines the electrical, logical, and timing interfaces of the GBA 
 – Plus Mode: Extended 1600×1440 framebuffer, banked VRAM, 6 DMA channels, optional 33 MHz CPU clock.
 
 ## 2. Top-Level I/O and Ports
-| Signal         | Dir   | Width | Description                                |
-|--------------- |------ |-----  |------------------------------------------- |
-| `clk_50MHz`    | in    | 1     | 50 MHz reference clock                     |
-| `reset_n`      | in    | 1     | Active-low global reset                    |
-| `rom_header`   | in    | [7:0]×256 | ROM header bytes 0x000–0x0FF            |
-| `rom_clk`      | in    | 1     | ROM data strobe                            |
-| `rom_data`     | in    | 16    | ROM data bus                               |
-| `lcd_hsync`    | out   | 1     | LCD horizontal sync                        |
-| `lcd_vsync`    | out   | 1     | LCD vertical sync                          |
-| `lcd_rgb`      | out   | 24    | 8:8:8 RGB pixel                            |
-| `lcd_clk`      | out   | 1     | Pixel clock to LCD                         |
-| **AHB Bus**    |       |       |                                            |
-| `hclk`         | in    | 1     | AHB bus clock                              |
-| `haddr`        | in    | 32    | AHB address                                |
-| `htrans`       | in    | 2     | AHB transfer type                          |
-| `hwrite`       | in    | 1     | AHB write enable                           |
-| `hwdata`       | in    | 32    | AHB write data                             |
-| `hrdata`       | out   | 32    | AHB read data                              |
-| `hready`       | out   | 1     | AHB ready                                  |
+| Signal         | Dir   | Width     | Description                                |
+|--------------- |------ |---------- |------------------------------------------- |
+| `clk_50MHz`    | in    | 1         | 50 MHz reference clock                     |
+| `reset_n`      | in    | 1         | Active-low global reset                    |
+| `rom_header`   | in    | [7:0]×256 | ROM header bytes 0x000–0x0FF               |
+| `rom_clk`      | in    | 1         | ROM data strobe                            |
+| `rom_data`     | in    | 16        | ROM data bus                               |
+| `lcd_hsync`    | out   | 1         | LCD horizontal sync                        |
+| `lcd_vsync`    | out   | 1         | LCD vertical sync                          |
+| `lcd_rgb`      | out   | 24        | 8:8:8 RGB pixel                            |
+| `lcd_clk`      | out   | 1         | Pixel clock to LCD                         |
+| **AHB Bus**    |       |           |                                            |
+| `hclk`         | in    | 1         | AHB bus clock                              |
+| `haddr`        | in    | 32        | AHB address                                |
+| `htrans`       | in    | 2         | AHB transfer type                          |
+| `hwrite`       | in    | 1         | AHB write enable                           |
+| `hwdata`       | in    | 32        | AHB write data                             |
+| `hrdata`       | out   | 32        | AHB read data                              |
+| `hready`       | out   | 1         | AHB ready                                  |
 
 ## 3. Boot-Time Mode Detection
 1. On reset, sample `rom_header` bytes at offset 0x0C0.  
@@ -60,11 +60,11 @@ Timing Constraints
 Mux controlled by plus_mode.
 
 6. Memory Map & Banked VRAM
-| Region          | Addr Range (Legacy)      | Addr Range (Plus)            |
-|-----------------|--------------------------|------------------------------|
-| VRAM            | 0x06000000–0x06017FFF  | 0x06000000–0x061FFFFF      |
-| Palette RAM     | 0x05000000–0x050003FF  | same + extended LUT banks    |
-| OAM             | 0x07000000–0x070003FF  | same + banked OAM segments   |
+| Region          | Addr Range (Legacy)       | Addr Range (Plus)                  |
+|-----------------|---------------------------|------------------------------------|
+| VRAM            | 0x06000000–0x06017FFF     | 0x06000000–0x061FFFFF              |
+| Palette RAM     | 0x05000000–0x050003FF     | same + extended LUT banks          |
+| OAM             | 0x07000000–0x070003FF     | same + banked OAM segments         |
 | DMA Channels    | 4 @ 0x040000B0–0x040000BC | 6 (DMA4/5 @ 0xA0000400–0xA000040C) |
 
 Bank-select register: 0xA000_04F0 (3-bit value → map 256 KB banks).
