@@ -5,7 +5,37 @@
 - **Legacy Mode**: Cycle-accurate GameBoy Advance (240x160, 16.78MHz, 4 DMA, 40 sprites).
 - **Plus Mode**: Extended execution environment (1600x1440 framebuffer, 33MHz CPU, 6 DMA, 64 sprites, 2MB VRAM).
 
-This repo contains the specification only - no implementation yet. The goal iss to rpovide a clear, open foundation so FPGA developers and retro-computing enthusiasts can build on it.
+      +-------------------+
+      |  ROM Header Scan  |
+      +---------+---------+
+                |
+                v
+      +-------------------+
+      |   Mode Select     |
+      |   (Legacy/Plus)   |
+      +----+---------+----+
+           |         |
+     Legacy Mode  Plus Mode
+           |         |
+           v         v
+ +---------+----+  +-+------------+
+ | Legacy Clock |  |  Plus Clock  |
+ |   16.78 MHz  |  |    33 MHz    |
+ +-------+------+  +-------+------+
+         |                 |
+         v                 v
+ +---------+----+  +-+------------+
+ | Legacy Video |  |  Plus Video  |
+ |    240x160   |  | 1600x1440 FB |
+ +-------+------+  +-------+------+
+         |                 |
+         +--------+--------+
+                  v
+            +-----------+
+            |  LCD Out  |
+            +-----------+
+
+This repo contains the specification only - no implementation yet. The goal iss to proovide a clear, open foundation so FPGA developers and retro-computing enthusiasts can build on it.
 
 ## Quick Links
 - [Full Specification](GBAPlus_Spec.md)
