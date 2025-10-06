@@ -12,6 +12,19 @@ This repo contains the specification only - no implementation yet. The goal iss 
 - DOI (Zenodo archive): https://doi.org/10.5281/zenodo.17274535
 - Preprint: *arXiv link once uploaded*
 
+## Roadmap
+
+- [] Mode Detection FSM
+- [] Clock Generation & BUFGMUX
+- [] Legacy Scaler Pipeline
+- [] Plus Passthrough Pipeline
+- [] Banked VRAM Controller
+- [] Sprite Engine FSM
+- [] Blending Logic Module
+- [] AHB Addr Decoder
+- [] Testbench for header-scan, memory map, sprite cases
+- [] Example Plus-Mode Demo (tilemap + sprite stress)
+
 ## How to contribute
 - Open issues for questions, clarifications or suggestions.
 - Submit pull requests with corrections, diagrams or HDL stubs.
