@@ -1,0 +1,8 @@
+cff-version: 1.2
+title: "GBA Plus: Dual-Mode FPGA Core Specification"
+authors:
+  - family-names: Evangelista da Silva
+    given-names: José
+date-released: 2025-10-05
+license: MIT
+message: "If you use this specification, please cite it."
