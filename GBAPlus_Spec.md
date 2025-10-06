@@ -7,6 +7,38 @@ It balances preservation (cycle‑accurate GBA emulation) with extension (new ha
 - **Legacy Mode**: 240×160 framebuffer, 16.78 MHz ARM7TDMI, 96 KB VRAM, 4 DMA channels, 40 sprites/line.  
 - **Plus Mode**: 1600×1440 framebuffer, 33 MHz CPU option, 2 MB banked VRAM, 6 DMA channels, 64 sprites/line, extended blending.
 
+`text
+                +-------------------+
+                |   ROM Header Scan |
+                +---------+---------+
+                          |
+                          v
+                +---------+---------+
+                |   Mode Select     |
+                | (Legacy / Plus)   |
+                +----+---------+----+
+                     |         |
+     Legacy Mode ----+         +---- Plus Mode
+                     |         |
+                     v         v
+        +------------+--+   +--+------------+
+        | Legacy Clock |   | Plus Clock     |
+        | 16.78 MHz    |   | 33 MHz         |
+        +------+-------+   +-------+--------+
+               |                   |
+               v                   v
+        +------+-------+   +-------+-------+
+        | Legacy Video |   | Plus Video    |
+        | Scaler 240x160|  | 1600x1440 FB  |
+        +------+-------+   +-------+-------+
+               |                   |
+               +---------+---------+
+                         v
+                  +------+------+
+                  |   LCD Out   |
+                  +-------------+
+`
+
 This document defines the interfaces, memory maps, state machines, and test methodology needed for implementation.
 
 ## 2. Mode Detection
@@ -69,6 +101,19 @@ Mux controlled by plus_mode.
 
 Bank-select register: 0xA000_04F0 (3-bit value → map 256 KB banks).
 
+`text
++----------------------+-----------------------------+
+| Address Range        | Legacy Mode   | Plus Mode   |
++----------------------+---------------+-------------+
+| 0x0600_0000          | 96 KB VRAM    | 2 MB VRAM   |
+| 0x0500_0000          | 1 KB Palette  | Extended    |
+| 0x0700_0000          | 1 KB OAM      | Banked OAM  |
+| 0x0400_00B0–00BC     | 4 DMA         | 4 DMA       |
+| 0xA000_0400–040C     | N/A           | DMA4/5      |
+| 0xA000_04F0          | N/A           | Bank Select |
++----------------------+---------------+-------------+
+`
+
 ## 7. Sprite Engine FSM
 State diagram (Appendix B) with five states:
 1. IDLE  
@@ -77,7 +122,36 @@ State diagram (Appendix B) with five states:
 4. WAIT_DMA  
 5. DRAW_LINE  
 
-See Verilog pseudocode in Appendix B.
+`text
+   +-------+
+   | IDLE  |
+   +---+---+
+       |
+       v
++------+------+
+| FETCH_ATTR |
++------+------+
+       |
+       v
++------+------+
+| ISSUE_DMA  |
++------+------+
+       |
+       v
++------+------+
+| WAIT_DMA   |
++------+------+
+       |
+       v
++------+------+
+| DRAW_LINE  |
++------+------+
+       |
+       v
+   +---+---+
+   | IDLE  |
+   +-------+
+`
 
 ## 8. Blending Logic
 - Input: bgpixel[14:0], sppixel[14:0], spprio, blendmode[1:0].  
@@ -89,6 +163,16 @@ See Verilog pseudocode in Appendix B.
 - Combinatorial logic with optional pipeline register for 33 MHz timing.
 - Priority compare: spprio < bgprio.
 
+`text
+ BG Pixel ----+
+              |        +-------------------+
+ SP Pixel ----+------->| Blend Logic Unit  |----> Output Pixel
+              |        | Modes:            |
+ Priority ----+------->| 00 Opaque         |
+ Blend Mode --+------->| 01 50/50 Average  |
+                       | 10 75/25 Mix      |
+                       +-------------------+
+`
 
 ## 9. Top-Level I/O and Ports
 | Signal         | Dir   | Width     | Description                                |
